@@ -2,37 +2,63 @@
 
 namespace Lab4
 {
-	class Matrix2D
+	// Новий абстрактний базовий клас — керує Random і описує інтерфейс
+	abstract class MatrixBase
 	{
-		// Замість protected поля робимо приватне поле
-		private int[,] _a = new int[3, 3];
+		protected readonly Random _rng;
 
-		// змінено доступність RNG, щоб похідний клас міг його використовувати без рефлексії
-		protected static readonly Random _rng = new Random();
+		// Конструктор приймає Random (для детермінованого тестування можна передати new Random(seed))
+		protected MatrixBase(Random? rng = null) => _rng = rng ?? Random.Shared;
+		protected MatrixBase(int seed) => _rng = new Random(seed);
 
-		// Розміри як властивості (тільки для читання)
-		public int Rows => 3;
-		public int Cols => 3;
+		public abstract void ReadFromKeyboard();
+		public abstract void FillRandom(int min = -10, int max = 10);
+		public abstract int GetMin();
+		public abstract void Print();
+	}
 
-		// Метод доступу з перевіркою меж (инкапсуляція)
+	class Matrix2D : MatrixBase
+	{
+		// Ініціалізація масиву переміщена в конструктор
+		private int[,] _a;
+		public int Rows { get; }
+		public int Cols { get; }
+
+		// Конструктори: розмір + Random або seed
+		public Matrix2D(int rows = 3, int cols = 3, Random? rng = null) : base(rng)
+		{
+			if (rows <= 0 || cols <= 0) throw new ArgumentException("Rows and Cols must be positive.");
+			Rows = rows;
+			Cols = cols;
+			_a = new int[Rows, Cols];
+		}
+
+		public Matrix2D(int rows, int cols, int seed) : base(seed)
+		{
+			if (rows <= 0 || cols <= 0) throw new ArgumentException("Rows and Cols must be positive.");
+			Rows = rows;
+			Cols = cols;
+			_a = new int[Rows, Cols];
+		}
+
+		// Інкапсуляція доступу
 		public int GetElement(int i, int j)
 		{
 			if (i < 0 || i >= Rows || j < 0 || j >= Cols)
-				throw new ArgumentOutOfRangeException("Індекси виходять за межі матриці 3x3.");
+				throw new ArgumentOutOfRangeException(nameof(i), "Індекси виходять за межі матриці.");
 			return _a[i, j];
 		}
 
 		public void SetElement(int i, int j, int value)
 		{
 			if (i < 0 || i >= Rows || j < 0 || j >= Cols)
-				throw new ArgumentOutOfRangeException("Індекси виходять за межі матриці 3x3.");
+				throw new ArgumentOutOfRangeException(nameof(i), "Індекси виходять за межі матриці.");
 			_a[i, j] = value;
 		}
 
-		// Заповнення з клавіатури
-		public virtual void ReadFromKeyboard()
+		public override void ReadFromKeyboard()
 		{
-			Console.WriteLine("Введіть 9 цілих чисел для двовимірної матриці 3x3:");
+			Console.WriteLine($"Введіть {Rows * Cols} цілих чисел для двовимірної матриці {Rows}x{Cols}:");
 			for (int i = 0; i < Rows; i++)
 				for (int j = 0; j < Cols; j++)
 				{
@@ -50,67 +76,80 @@ namespace Lab4
 				}
 		}
 
-		// Заповнення випадковими числами
-		public virtual void FillRandom(int min = -10, int max = 10)
+		public override void FillRandom(int min = -10, int max = 10)
 		{
 			for (int i = 0; i < Rows; i++)
 				for (int j = 0; j < Cols; j++)
 					SetElement(i, j, _rng.Next(min, max + 1));
 		}
 
-		// Знаходження мінімального елемента
-		public virtual int GetMin()
+		public override int GetMin()
 		{
 			int min = GetElement(0, 0);
 			for (int i = 0; i < Rows; i++)
 				for (int j = 0; j < Cols; j++)
-					if (GetElement(i, j) < min) min = GetElement(i, j);
+				{
+					int val = GetElement(i, j);
+					if (val < min) min = val;
+				}
 			return min;
 		}
 
-		public virtual void Print()
+		public override void Print()
 		{
-			Console.WriteLine("2D Matrix (3x3):");
+			Console.WriteLine($"2D Matrix ({Rows}x{Cols}):");
 			for (int i = 0; i < Rows; i++)
 			{
 				for (int j = 0; j < Cols; j++)
-					Console.Write($"{GetElement(i, j),4}");
+					Console.Write($"{GetElement(i, j),6}");
 				Console.WriteLine();
 			}
 		}
-
-		// public wrapper methods (зручні іменовані методи)
-		public void SetElementsFromKeyboard() => ReadFromKeyboard();
-		public void SetElementsRandom(int min = -10, int max = 10) => FillRandom(min, max);
-		public int FindMinElement() => GetMin();
 	}
 
-	class Matrix3D : Matrix2D
+	class Matrix3D : MatrixBase
 	{
-		// Власне приватне поле для 3D, не відкриваємо його назовні
-		private int[,,] _b = new int[3, 3, 3];
+		private int[,,] _b;
+		public int Depth { get; }
+		public int Rows { get; }
+		public int Cols { get; }
 
-		public int Depth => 3;
+		// Конструктори: розміри + Random або seed
+		public Matrix3D(int depth = 3, int rows = 3, int cols = 3, Random? rng = null) : base(rng)
+		{
+			if (depth <= 0 || rows <= 0 || cols <= 0) throw new ArgumentException("Dimensions must be positive.");
+			Depth = depth;
+			Rows = rows;
+			Cols = cols;
+			_b = new int[Depth, Rows, Cols];
+		}
 
-		// Методи доступу для 3D з перевіркою індексів
+		public Matrix3D(int depth, int rows, int cols, int seed) : base(seed)
+		{
+			if (depth <= 0 || rows <= 0 || cols <= 0) throw new ArgumentException("Dimensions must be positive.");
+			Depth = depth;
+			Rows = rows;
+			Cols = cols;
+			_b = new int[Depth, Rows, Cols];
+		}
+
 		public int GetElement3D(int k, int i, int j)
 		{
 			if (k < 0 || k >= Depth || i < 0 || i >= Rows || j < 0 || j >= Cols)
-				throw new ArgumentOutOfRangeException("Індекси виходять за межі матриці 3x3x3.");
+				throw new ArgumentOutOfRangeException("Індекси виходять за межі матриці 3D.");
 			return _b[k, i, j];
 		}
 
 		public void SetElement3D(int k, int i, int j, int value)
 		{
 			if (k < 0 || k >= Depth || i < 0 || i >= Rows || j < 0 || j >= Cols)
-				throw new ArgumentOutOfRangeException("Індекси виходять за межі матриці 3x3x3.");
+				throw new ArgumentOutOfRangeException("Індекси виходять за межі матриці 3D.");
 			_b[k, i, j] = value;
 		}
 
-		// Перевизначаємо зчитування для 3D, використовуємо SetElement3D
 		public override void ReadFromKeyboard()
 		{
-			Console.WriteLine("Введіть 27 цілих чисел для тривимірної матриці 3x3x3:");
+			Console.WriteLine($"Введіть {Depth * Rows * Cols} цілих чисел для тривимірної матриці {Depth}x{Rows}x{Cols}:");
 			for (int k = 0; k < Depth; k++)
 				for (int i = 0; i < Rows; i++)
 					for (int j = 0; j < Cols; j++)
@@ -129,7 +168,6 @@ namespace Lab4
 					}
 		}
 
-		// Перевизначаємо заповнення випадковими числами для 3D — використовуємо захищений _rng
 		public override void FillRandom(int min = -10, int max = 10)
 		{
 			for (int k = 0; k < Depth; k++)
@@ -138,32 +176,29 @@ namespace Lab4
 						SetElement3D(k, i, j, _rng.Next(min, max + 1));
 		}
 
-		// Додаємо ті самі зручні wrapper-методи для 3D
-		public void SetElementsFromKeyboard3D() => ReadFromKeyboard();
-		public void SetElementsRandom3D(int min = -10, int max = 10) => FillRandom(min, max);
-		public int FindMinElement3D() => GetMin();
-
-		// Перевизначаємо пошук мінімуму для 3D
 		public override int GetMin()
 		{
 			int min = GetElement3D(0, 0, 0);
 			for (int k = 0; k < Depth; k++)
 				for (int i = 0; i < Rows; i++)
 					for (int j = 0; j < Cols; j++)
-						if (GetElement3D(k, i, j) < min) min = GetElement3D(k, i, j);
+					{
+						int val = GetElement3D(k, i, j);
+						if (val < min) min = val;
+					}
 			return min;
 		}
 
 		public override void Print()
 		{
-			Console.WriteLine("3D Matrix (3x3x3):");
+			Console.WriteLine($"3D Matrix ({Depth}x{Rows}x{Cols}):");
 			for (int k = 0; k < Depth; k++)
 			{
 				Console.WriteLine($"Layer {k}:");
 				for (int i = 0; i < Rows; i++)
 				{
 					for (int j = 0; j < Cols; j++)
-						Console.Write($"{GetElement3D(k, i, j),4}");
+						Console.Write($"{GetElement3D(k, i, j),6}");
 					Console.WriteLine();
 				}
 			}
@@ -174,15 +209,15 @@ namespace Lab4
 	{
 		static void Main(string[] args)
 		{
-			// Демонстрація роботи
-			var m2 = new Matrix2D();
+			// Демонстрація: випадкове заповнення з Random.Shared
+			var m2 = new Matrix2D(); // за замовчуванням 3x3, використовує Random.Shared
 			m2.FillRandom(-20, 20);
 			m2.Print();
 			Console.WriteLine($"Мінімальний елемент 2D матриці: {m2.GetMin()}");
 			Console.WriteLine();
 
-			var m3 = new Matrix3D();
-			// Використовуємо ReadFromKeyboard або FillRandom; FillRandom у 3D створює локальний Random
+			// Детермінований приклад: передаємо seed для відтворюваності
+			var m3 = new Matrix3D(3, 3, 3, seed: 42); // seed дає детермінований Random
 			m3.FillRandom(-20, 20);
 			m3.Print();
 			Console.WriteLine($"Мінімальний елемент 3D матриці: {m3.GetMin()}");
